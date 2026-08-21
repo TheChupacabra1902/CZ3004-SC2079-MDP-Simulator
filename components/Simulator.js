@@ -54,6 +54,133 @@ export default function Simulator() {
   const [commands, setCommands] = useState([]);
   const [page, setPage] = useState(0);
 
+  //---------------------------code improvement---------------------------------------------
+  const [isRunning, setIsRunning] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [recognisedImages, setRecognisedImages] = useState([]);
+  const [routeOrder, setRouteOrder] = useState([]);
+  const [shortestTime, setShortestTime] = useState(null);
+  const [simulationPath, setSimulationPath] = useState([]);
+  const [simulationIndex, setSimulationIndex] = useState(0);
+
+  const SIMULATION_SPEED = 1; // 1 = real-time
+  const TIME_LIMIT = 300; // change to your required limit
+  const MOVE_TIME_PER_UNIT = 0.2;
+  const TURN_TIME = 0.5;
+
+
+  const generatePermutations = (items) => {
+    if (items.length <= 1) return [items];
+
+    const result = [];
+
+    items.forEach((item, index) => {
+      const remaining = [
+        ...items.slice(0, index),
+        ...items.slice(index + 1),
+      ];
+
+      generatePermutations(remaining).forEach((perm) => {
+        result.push([item, ...perm]);
+      });
+    });
+
+    return result;
+  };
+
+
+  const calculatePathTime = (path) => {
+    let time = 0;
+
+    for (let i = 1; i < path.length; i++) {
+      const previous = path[i - 1];
+      const current = path[i];
+
+      const dx = Math.abs(current.x - previous.x);
+      const dy = Math.abs(current.y - previous.y);
+
+      time += (dx + dy) * MOVE_TIME_PER_UNIT;
+
+      if (previous.d !== current.d) {
+        time += TURN_TIME;
+      }
+    }
+
+    return time;
+  };
+
+
+  const calculateHamiltonianRoutes = async () => {
+    const imageObstacles = obstacles.slice(0, 5);
+
+    if (imageObstacles.length !== 5) {
+      alert("Please add exactly 5 image obstacles.");
+      return;
+    }
+
+    const permutations = generatePermutations(imageObstacles);
+
+    let bestRoute = null;
+    let bestTime = Infinity;
+
+    for (const permutation of permutations) {
+      let currentX = robotX;
+      let currentY = robotY;
+      let currentDir = Number(robotDir);
+
+      let combinedPath = [];
+
+      for (const target of permutation) {
+        const result = await queryTargetPath(
+          obstacles,
+          currentX,
+          currentY,
+          currentDir,
+          target.id
+        );
+
+        if (!result) {
+          combinedPath = null;
+          break;
+        }
+
+        const targetPath = result.data.path;
+
+        if (combinedPath.length > 0) {
+          combinedPath = combinedPath.concat(targetPath.slice(1));
+        } else {
+          combinedPath = targetPath;
+        }
+
+        const finalState = targetPath[targetPath.length - 1];
+
+        currentX = finalState.x;
+        currentY = finalState.y;
+        currentDir = finalState.d;
+      }
+
+      if (!combinedPath) continue;
+
+      const time = calculatePathTime(combinedPath);
+
+      if (time < bestTime) {
+        bestTime = time;
+        bestRoute = {
+          order: permutation,
+          path: combinedPath,
+        };
+      }
+    }
+
+    if (bestRoute) {
+      setRouteOrder(bestRoute.order);
+      setShortestTime(bestTime);
+      setSimulationPath(bestRoute.path);
+      setSimulationIndex(0);
+    }
+  };
+  //----------------------------------------------------------------------------------------
+
   const generateNewID = () => {
     while (true) {
       let new_id = Math.floor(Math.random() * 10) + 1; // just try to generate an id;

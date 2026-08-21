@@ -2,7 +2,7 @@ import BaseAPI, { methodType } from "./BaseAPI";
 
 export default class QueryAPI extends BaseAPI {
   // Query the path from backend server
-  static query(obstacles, robotX, robotY, robotDir, callback) {
+  static query(obstacles, robotX, robotY, robotDir, targetId, callback) {
     /* Construct the content of the request 
 		obstacles: the array of obstacles
 		robotX: the x coordinate of the robot
@@ -16,6 +16,7 @@ export default class QueryAPI extends BaseAPI {
       robot_y: robotY,
       robot_dir: robotDir,
       retrying: false,
+      target_id: targetId
     };
 
     // Send the request to the backend server

@@ -53,6 +53,7 @@ export default function Simulator() {
   const [path, setPath] = useState([]);
   const [commands, setCommands] = useState([]);
   const [page, setPage] = useState(0);
+  const [timeTaken, setTimeTaken] = useState(0); // newly added feature to track time
 
   const generateNewID = () => {
     while (true) {
@@ -245,6 +246,7 @@ export default function Simulator() {
     setCommands([]);
     setPage(0);
     setObstacles([]);
+    setTimeTaken(0); // newly added feature to track time taken
   };
 
   const onReset = () => {
@@ -256,6 +258,7 @@ export default function Simulator() {
     setPath([]);
     setCommands([]);
     setPage(0);
+    setTimeTaken(0); // newly added feature to track time taken
   };
 
   const renderGrid = () => {
@@ -513,6 +516,7 @@ export default function Simulator() {
             disabled={page === 0}
             onClick={() => {
               setPage(page - 1);
+              setTimeTaken(timeTaken - 3);
             }}
           >
             <svg
@@ -534,12 +538,16 @@ export default function Simulator() {
           <span className="mx-5 text-black">
             Step: {page + 1} / {path.length}
           </span>
+          <span className="mx-5 text-black">
+          Time Taken: {timeTaken}s
+          </span>
           <span className="mx-5 text-black">{commands[page]}</span>
           <button
             className="btn btn-circle pt-2 pl-2"
             disabled={page === path.length - 1}
             onClick={() => {
               setPage(page + 1);
+              setTimeTaken(timeTaken + 3);
             }}
           >
             <svg

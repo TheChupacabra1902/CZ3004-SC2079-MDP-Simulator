@@ -54,6 +54,23 @@ export default function Simulator() {
   const [commands, setCommands] = useState([]);
   const [page, setPage] = useState(0);
   const [timeTaken, setTimeTaken] = useState(0); // newly added feature to track time
+  const [trail, setTrail] = useState([]); // newly added feature to create trail behind robot as it moves
+
+  const addTrail = (from, to) => {
+  setTrail((prev) => [
+    ...prev,
+    {
+      from: {
+        x: from.x,
+        y: from.y - 1,
+      },
+      to: {
+        x: to.x,
+        y: to.y - 1,
+      },
+    },
+  ]);
+};
 
   const generateNewID = () => {
     while (true) {
@@ -262,114 +279,190 @@ export default function Simulator() {
   };
 
   const renderGrid = () => {
-    // Initialize the empty rows array
-    const rows = [];
+  const rows = [];
 
-    const baseStyle = {
-      width: 25,
-      height: 25,
-      borderStyle: "solid",
-      borderTopWidth: 1,
-      borderBottomWidth: 1,
-      borderLeftWidth: 1,
-      borderRightWidth: 1,
-      padding: 0,
-    };
+  const robotCells = generateRobotCells();
 
-    // Generate robot cells
-    const robotCells = generateRobotCells();
+  // Create trail segments from the robot's movement history
+  const trailSegments = trail.map((segment) => {
+  const from = transformCoord(segment.from.x, segment.from.y);
+  const to = transformCoord(segment.to.x, segment.to.y);
 
-    // Generate the grid
-    for (let i = 0; i < 20; i++) {
-      const cells = [
-        // Header cells
-        <td key={i} className="w-5 h-5 md:w-8 md:h-8">
-          <span className="text-sky-900 font-bold text-[0.6rem] md:text-base ">
-            {19 - i}
-          </span>
-        </td>,
-      ];
+  let direction;
+  let arrow;
 
-      for (let j = 0; j < 20; j++) {
-        let foundOb = null;
-        let foundRobotCell = null;
+  if (segment.to.y > segment.from.y) {
+    direction = "vertical";
+    arrow = "↑";
+  } else if (segment.to.y < segment.from.y) {
+    direction = "vertical";
+    arrow = "↓";
+  } else if (segment.to.x > segment.from.x) {
+    direction = "horizontal";
+    arrow = "→";
+  } else {
+    direction = "horizontal";
+    arrow = "←";
+  }
 
-        for (const ob of obstacles) {
-          const transformed = transformCoord(ob.x, ob.y);
-          if (transformed.x === i && transformed.y === j) {
-            foundOb = ob;
-            break;
-          }
-        }
+  return {
+    from,
+    to,
+    direction,
+    arrow,
+  };
+});
 
-        if (!foundOb) {
-          for (const cell of robotCells) {
-            if (cell.x === i && cell.y === j) {
-              foundRobotCell = cell;
-              break;
-            }
-          }
-        }
+  for (let i = 0; i < 20; i++) {
+    const cells = [
+      <td key={i} className="w-5 h-5 md:w-8 md:h-8">
+        <span className="text-sky-900 font-bold text-[0.6rem] md:text-base">
+          {19 - i}
+        </span>
+      </td>,
+    ];
 
-        if (foundOb) {
-          if (foundOb.d === Direction.WEST) {
-            cells.push(
-              <td className="border border-l-4 border-l-red-500 w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
-            );
-          } else if (foundOb.d === Direction.EAST) {
-            cells.push(
-              <td className="border border-r-4 border-r-red-500 w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
-            );
-          } else if (foundOb.d === Direction.NORTH) {
-            cells.push(
-              <td className="border border-t-4 border-t-red-500 w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
-            );
-          } else if (foundOb.d === Direction.SOUTH) {
-            cells.push(
-              <td className="border border-b-4 border-b-red-500 w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
-            );
-          } else if (foundOb.d === Direction.SKIP) {
-            cells.push(
-              <td className="border w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
-            );
-          }
-        } else if (foundRobotCell) {
-          if (foundRobotCell.d !== null) {
-            cells.push(
-              <td
-                className={`border w-5 h-5 md:w-8 md:h-8 ${
-                  foundRobotCell.s != -1 ? "bg-red-500" : "bg-yellow-300"
-                }`}
-              />
-            );
-          } else {
-            cells.push(
-              <td className="bg-green-600 border-white border w-5 h-5 md:w-8 md:h-8" />
-            );
-          }
-        } else {
-          cells.push(
-            <td className="border-black border w-5 h-5 md:w-8 md:h-8" />
-          );
+    for (let j = 0; j < 20; j++) {
+      let foundOb = null;
+      let foundRobotCell = null;
+
+      for (const ob of obstacles) {
+        const transformed = transformCoord(ob.x, ob.y);
+
+        if (transformed.x === i && transformed.y === j) {
+          foundOb = ob;
+          break;
         }
       }
 
-      rows.push(<tr key={19 - i}>{cells}</tr>);
+      if (!foundOb) {
+        for (const cell of robotCells) {
+          if (cell.x === i && cell.y === j) {
+            foundRobotCell = cell;
+            break;
+          }
+        }
+      }
+
+      // Check whether this cell contains part of a trail
+      let trailContent = null;
+
+      for (const segment of trailSegments) {
+        const minX = Math.min(segment.from.x, segment.to.x);
+        const maxX = Math.max(segment.from.x, segment.to.x);
+        const minY = Math.min(segment.from.y, segment.to.y);
+        const maxY = Math.max(segment.from.y, segment.to.y);
+
+        if (
+          i >= minX &&
+          i <= maxX &&
+          j >= minY &&
+          j <= maxY
+        ) {
+          const length =
+            segment.direction === "horizontal"
+              ? maxX - minX
+              : maxY - minY;
+
+          const position =
+            segment.direction === "horizontal"
+              ? i - minX
+              : j - minY;
+
+          const middle = Math.floor(length / 2);
+
+          trailContent = (
+            <div
+              className="flex items-center justify-center w-full h-full text-black font-bold"
+              style={{
+                borderTop:
+                  segment.direction === "horizontal"
+                    ? "2px solid black"
+                    : "none",
+                borderLeft:
+                  segment.direction === "vertical"
+                    ? "2px solid black"
+                    : "none",
+              }}
+            >
+              {position === middle && segment.arrow}
+            </div>
+          );
+
+          break;
+        }
+      }
+
+      if (foundOb) {
+        if (foundOb.d === Direction.WEST) {
+          cells.push(
+            <td className="border border-l-4 border-l-red-500 w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
+          );
+        } else if (foundOb.d === Direction.EAST) {
+          cells.push(
+            <td className="border border-r-4 border-r-red-500 w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
+          );
+        } else if (foundOb.d === Direction.NORTH) {
+          cells.push(
+            <td className="border border-t-4 border-t-red-500 w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
+          );
+        } else if (foundOb.d === Direction.SOUTH) {
+          cells.push(
+            <td className="border border-b-4 border-b-red-500 w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
+          );
+        } else {
+          cells.push(
+            <td className="border w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
+          );
+        }
+      } else if (foundRobotCell) {
+        if (foundRobotCell.d !== null) {
+          cells.push(
+            <td
+              className={`border w-5 h-5 md:w-8 md:h-8 ${
+                foundRobotCell.s !== -1
+                  ? "bg-red-500"
+                  : "bg-yellow-300"
+              }`}
+            />
+          );
+        } else {
+          cells.push(
+            <td className="bg-green-600 border-white border w-5 h-5 md:w-8 md:h-8" />
+          );
+        }
+      } else if (trailContent) {
+        cells.push(
+          <td className="border-black border w-5 h-5 md:w-8 md:h-8 p-0">
+            {trailContent}
+          </td>
+        );
+      } else {
+        cells.push(
+          <td className="border-black border w-5 h-5 md:w-8 md:h-8" />
+        );
+      }
     }
 
-    const yAxis = [<td key={0} />];
-    for (let i = 0; i < 20; i++) {
-      yAxis.push(
-        <td className="w-5 h-5 md:w-8 md:h-8">
-          <span className="text-sky-900 font-bold text-[0.6rem] md:text-base ">
-            {i}
-          </span>
-        </td>
-      );
-    }
-    rows.push(<tr key={20}>{yAxis}</tr>);
-    return rows;
-  };
+    rows.push(<tr key={19 - i}>{cells}</tr>);
+  }
+
+  const yAxis = [<td key={0} />];
+
+  for (let i = 0; i < 20; i++) {
+    yAxis.push(
+      <td className="w-5 h-5 md:w-8 md:h-8">
+        <span className="text-sky-900 font-bold text-[0.6rem] md:text-base">
+          {i}
+        </span>
+      </td>
+    );
+  }
+
+  rows.push(<tr key={20}>{yAxis}</tr>);
+
+  return rows;
+};
 
   useEffect(() => {
     if (page >= path.length) return;
@@ -515,6 +608,7 @@ export default function Simulator() {
             className="btn btn-circle pt-2 pl-1"
             disabled={page === 0}
             onClick={() => {
+              setTrail(prev => prev.slice(0, -1));
               setPage(page - 1);
               setTimeTaken(timeTaken - 3);
             }}
@@ -546,6 +640,7 @@ export default function Simulator() {
             className="btn btn-circle pt-2 pl-2"
             disabled={page === path.length - 1}
             onClick={() => {
+              addTrail(path[page], path[page + 1]);
               setPage(page + 1);
               setTimeTaken(timeTaken + 3);
             }}

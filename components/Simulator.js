@@ -55,6 +55,32 @@ export default function Simulator() {
   const [page, setPage] = useState(0);
   const [timeTaken, setTimeTaken] = useState(0); // newly added feature to track time
 
+  const getStepTime = (currentPage) => {
+  if (currentPage >= path.length - 1) return 0;
+
+  const current = path[currentPage];
+  const next = path[currentPage + 1];
+
+  // Turn
+  if (current.d !== next.d) {
+    return 2.25;
+  }
+
+  // Forward/backward movement
+  const distance =
+    Math.abs(next.x - current.x) +
+    Math.abs(next.y - current.y);
+
+  let time = distance;
+
+  // Image recognition
+  if (next.s !== -1) {
+    time += 3;
+  }
+
+  return time;
+};
+
   const generateNewID = () => {
     while (true) {
       let new_id = Math.floor(Math.random() * 10) + 1; // just try to generate an id;
@@ -516,7 +542,7 @@ export default function Simulator() {
             disabled={page === 0}
             onClick={() => {
               setPage(page - 1);
-              setTimeTaken(timeTaken - 3);
+              setTimeTaken(timeTaken - getStepTime(page - 1));
             }}
           >
             <svg
@@ -547,7 +573,7 @@ export default function Simulator() {
             disabled={page === path.length - 1}
             onClick={() => {
               setPage(page + 1);
-              setTimeTaken(timeTaken + 3);
+              setTimeTaken(timeTaken + getStepTime(page));
             }}
           >
             <svg

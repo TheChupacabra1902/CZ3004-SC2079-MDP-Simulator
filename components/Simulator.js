@@ -61,20 +61,20 @@ export default function Simulator() {
   const current = path[currentPage];
   const next = path[currentPage + 1];
 
+  let time = 0;
+
   // Turn
   if (current.d !== next.d) {
-    return 2.25;
+    time += 2.25;
+  } else {
+    // Forward/backward movement
+    time +=
+      Math.abs(next.x - current.x) +
+      Math.abs(next.y - current.y);
   }
 
-  // Forward/backward movement
-  const distance =
-    Math.abs(next.x - current.x) +
-    Math.abs(next.y - current.y);
-
-  let time = distance;
-
-  // Image recognition
-  if (next.s !== -1) {
+  // Image recognition when arriving at the next step
+  if (commands[currentPage + 1]?.startsWith("SNAP")) {
     time += 3;
   }
 
@@ -239,28 +239,23 @@ export default function Simulator() {
   };
 
   const compute = () => {
-    // Set computing to true, act like a lock
-    setIsComputing(true);
-    // Call the query function from the API
-    QueryAPI.query(obstacles, robotX, robotY, robotDir, (data, err) => {
-      if (data) {
-        // If the data is valid, set the path
-        setPath(data.data.path);
-        // Set the commands
-        const commands = [];
-        for (let x of data.data.commands) {
-          // If the command is a snapshot, skip it
-          if (x.startsWith("SNAP")) {
-            continue;
-          }
-          commands.push(x);
-        }
-        setCommands(commands);
-      }
-      // Set computing to false, release the lock
-      setIsComputing(false);
-    });
-  };
+  // Set computing to true, act like a lock
+  setIsComputing(true);
+
+  // Call the query function from the API
+  QueryAPI.query(obstacles, robotX, robotY, robotDir, (data, err) => {
+    if (data) {
+      // If the data is valid, set the path
+      setPath(data.data.path);
+
+      // Keep all commands, including SNAP commands
+      setCommands(data.data.commands);
+    }
+
+    // Set computing to false, release the lock
+    setIsComputing(false);
+  });
+};
 
   const onResetAll = () => {
     // Reset all the states
@@ -567,7 +562,9 @@ export default function Simulator() {
           <span className="mx-5 text-black">
           Time Taken: {timeTaken}s
           </span>
-          <span className="mx-5 text-black">{commands[page]}</span>
+          <span className="mx-5 text-black">
+          {commands[page]?.startsWith("SNAP")? commands[page + 1] || "": commands[page] || ""}
+          </span>
           <button
             className="btn btn-circle pt-2 pl-2"
             disabled={page === path.length - 1}

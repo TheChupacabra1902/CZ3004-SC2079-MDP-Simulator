@@ -81,6 +81,14 @@ export default function Simulator() {
   return time;
 };
 
+const formatCommands = () => {
+  if (!commands || commands.length === 0) return "";
+
+  return commands
+    .map((command, index) => `${index + 1}.${command.startsWith("SNAP") ? "SNAP" : command}`)
+    .join(", ");
+};
+
   const generateNewID = () => {
     while (true) {
       let new_id = Math.floor(Math.random() * 10) + 1; // just try to generate an id;
@@ -563,7 +571,7 @@ export default function Simulator() {
           Time Taken: {timeTaken}s
           </span>
           <span className="mx-5 text-black">
-          {commands[page]?.startsWith("SNAP")? commands[page + 1] || "": commands[page] || ""}
+          {formatCommands()}
           </span>
           <button
             className="btn btn-circle pt-2 pl-2"

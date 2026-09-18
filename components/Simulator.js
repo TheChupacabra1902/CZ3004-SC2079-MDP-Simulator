@@ -446,44 +446,32 @@ const compute = () => {
           }
         }
 
-        if (foundOb) {
-  if (foundOb.d === Direction.WEST) {
-    cells.push(
-      <td
-        style={baseStyle}
-        className="border border-l-4 border-l-red-500 bg-blue-700"
-      />
-    );
-  } else if (foundOb.d === Direction.EAST) {
-    cells.push(
-      <td
-        style={baseStyle}
-        className="border border-r-4 border-r-red-500 bg-blue-700"
-      />
-    );
-  } else if (foundOb.d === Direction.NORTH) {
-    cells.push(
-      <td
-        style={baseStyle}
-        className="border border-t-4 border-t-red-500 bg-blue-700"
-      />
-    );
-  } else if (foundOb.d === Direction.SOUTH) {
-    cells.push(
-      <td
-        style={baseStyle}
-        className="border border-b-4 border-b-red-500 bg-blue-700"
-      />
-    );
-  } else if (foundOb.d === Direction.SKIP) {
-    cells.push(
-      <td
-        style={baseStyle}
-        className="border bg-blue-700"
-      />
-    );
-  }
-} else if (foundRobotCell) {
+if (foundOb) {
+  const obstacleStyle = {
+    ...baseStyle,
+    backgroundColor: "#1d4ed8",
+
+    ...(foundOb.d === Direction.WEST && {
+      borderLeft: "4px solid red",
+    }),
+
+    ...(foundOb.d === Direction.EAST && {
+      borderRight: "4px solid red",
+    }),
+
+    ...(foundOb.d === Direction.NORTH && {
+      borderTop: "4px solid red",
+    }),
+
+    ...(foundOb.d === Direction.SOUTH && {
+      borderBottom: "4px solid red",
+    }),
+  };
+
+  cells.push(
+    <td style={obstacleStyle} />
+  );
+    } else if (foundRobotCell) {
           if (foundRobotCell.d !== null) {
             cells.push(
               <td

@@ -246,59 +246,57 @@ const formatCommands = () => {
 
 const calculateObstacleOrder = (pathData) => {
   const order = [];
-  const visited = new Set();
 
-  // A = first obstacle added
-  // B = second obstacle added
-  // C = third obstacle added
-  // etc.
   const obstacleLabels = obstacles.map((ob, index) => ({
     ...ob,
     label: String.fromCharCode(65 + index),
   }));
 
-  // Go through the robot path in the exact order the robot moves
-  for (const state of pathData) {
-    for (const ob of obstacleLabels) {
-      // Do not visit the same obstacle twice
-      if (visited.has(ob.label)) {
-        continue;
-      }
+  console.log("========== OBSTACLE ORDER DEBUG ==========");
 
-      let snapX = ob.x;
-      let snapY = ob.y;
+  for (const ob of obstacleLabels) {
+    let snapX = ob.x;
+    let snapY = ob.y;
 
-      /*
-       * SNAP happens 2 grids in front of the obstacle's
-       * image/red-line side.
-       */
+    // Robot center is 4 grid units from the obstacle
+    // on the side containing the image/red line.
+    if (ob.d === Direction.NORTH) {
+      snapY = ob.y + 4;
+    } else if (ob.d === Direction.SOUTH) {
+      snapY = ob.y - 4;
+    } else if (ob.d === Direction.EAST) {
+      snapX = ob.x + 4;
+    } else if (ob.d === Direction.WEST) {
+      snapX = ob.x - 4;
+    }
 
-      if (ob.d === Direction.NORTH) {
-        // Red side is on top
-        snapY = ob.y - 2;
-      } 
-      else if (ob.d === Direction.SOUTH) {
-        // Red side is on bottom
-        snapY = ob.y + 2;
-      } 
-      else if (ob.d === Direction.EAST) {
-        // Red side is on right
-        snapX = ob.x + 2;
-      } 
-      else if (ob.d === Direction.WEST) {
-        // Red side is on left
-        snapX = ob.x - 2;
-      }
+    const pathIndex = pathData.findIndex(
+      (state) => state.x === snapX && state.y === snapY
+    );
 
-      // Has the robot reached the SNAP position?
-      if (state.x === snapX && state.y === snapY) {
-        order.push(ob.label);
-        visited.add(ob.label);
-      }
+    console.log(
+      `Obstacle ${ob.label}: (${ob.x}, ${ob.y}), d=${ob.d}`,
+      `=> robot position (${snapX}, ${snapY})`,
+      `=> path index = ${pathIndex}`
+    );
+
+    if (pathIndex !== -1) {
+      order.push({
+        label: ob.label,
+        pathIndex: pathIndex,
+      });
     }
   }
 
-  return order;
+  // Earlier path index = visited earlier
+  order.sort((a, b) => a.pathIndex - b.pathIndex);
+
+  const finalOrder = order.map((item) => item.label);
+
+  console.log("FINAL OBSTACLE ORDER:", finalOrder);
+  console.log("==========================================");
+
+  return finalOrder;
 };
 
 const compute = () => {
@@ -316,9 +314,11 @@ const compute = () => {
       const order = calculateObstacleOrder(data.data.path);
 
       setObstacleOrder(order);
-      console.log("PATH:", data.data.path);
-      console.log("COMMANDS:", data.data.commands);
-      console.log("OBSTACLES:", obstacles);
+      console.log("========== DEBUG ==========");
+      console.log("PATH:", JSON.stringify(data.data.path, null, 2));
+      console.log("COMMANDS:", JSON.stringify(data.data.commands, null, 2));
+      console.log("OBSTACLES:", JSON.stringify(obstacles, null, 2));
+      console.log("===========================");
     }
 
     setIsComputing(false);
@@ -623,37 +623,41 @@ if (foundOb) {
       </div>
 
       <div className="grid grid-cols-4 gap-x-2 gap-y-4 items-center">
-        {obstacles.map((ob) => {
-          return (
-            <div
-              key={ob}
-              className="badge flex flex-row text-black bg-sky-100 rounded-xl text-xs md:text-sm h-max border-cyan-500"
-            >
-              <div flex flex-col>
-                <div>X: {ob.x}</div>
-                <div>Y: {ob.y}</div>
-                <div>D: {DirectionToString[ob.d]}</div>
-              </div>
-              <div>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  className="inline-block w-4 h-4 stroke-current"
-                  onClick={() => onRemoveObstacle(ob)}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  ></path>
-                </svg>
-              </div>
-            </div>
-          );
-        })}
+  {obstacles.map((ob, index) => {
+    const label = String.fromCharCode(65 + index);
+
+    return (
+      <div
+        key={ob.id}
+        className="badge flex flex-row text-black bg-sky-100 rounded-xl text-xs md:text-sm h-max border-cyan-500"
+      >
+        <div className="flex flex-col">
+          <div className="font-bold">Obstacle {label}</div>
+          <div>X: {ob.x}</div>
+          <div>Y: {ob.y}</div>
+          <div>D: {DirectionToString[ob.d]}</div>
+        </div>
+
+        <div className="ml-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            className="inline-block w-4 h-4 stroke-current cursor-pointer"
+            onClick={() => onRemoveObstacle(ob)}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </div>
       </div>
+    );
+  })}
+</div>
       <div className="btn-group btn-group-horizontal py-4">
   <button className="btn btn-error" onClick={onResetAll}>
     Reset All

@@ -50,8 +50,8 @@ export default function Simulator() {
   const [commands, setCommands] = useState([]);
   const [page, setPage] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const [timeTaken, setTimeTaken] = useState(0); // newly added feature to track time
-  const [obstacleOrder, setObstacleOrder] = useState([]); // track obstacle order to calculate shortest time
+  const [timeTaken, setTimeTaken] = useState(0); 
+  const [obstacleOrder, setObstacleOrder] = useState([]); 
 
   const getStepTime = (currentPage) => {
   if (currentPage >= path.length - 1) return 0;
@@ -252,8 +252,6 @@ const calculateObstacleOrder = (pathData) => {
     label: String.fromCharCode(65 + index),
   }));
 
-  console.log("========== OBSTACLE ORDER DEBUG ==========");
-
   for (const ob of obstacleLabels) {
     let snapX = ob.x;
     let snapY = ob.y;
@@ -274,12 +272,6 @@ const calculateObstacleOrder = (pathData) => {
       (state) => state.x === snapX && state.y === snapY
     );
 
-    console.log(
-      `Obstacle ${ob.label}: (${ob.x}, ${ob.y}), d=${ob.d}`,
-      `=> robot position (${snapX}, ${snapY})`,
-      `=> path index = ${pathIndex}`
-    );
-
     if (pathIndex !== -1) {
       order.push({
         label: ob.label,
@@ -292,9 +284,6 @@ const calculateObstacleOrder = (pathData) => {
   order.sort((a, b) => a.pathIndex - b.pathIndex);
 
   const finalOrder = order.map((item) => item.label);
-
-  console.log("FINAL OBSTACLE ORDER:", finalOrder);
-  console.log("==========================================");
 
   return finalOrder;
 };
@@ -314,11 +303,6 @@ const compute = () => {
       const order = calculateObstacleOrder(data.data.path);
 
       setObstacleOrder(order);
-      console.log("========== DEBUG ==========");
-      console.log("PATH:", JSON.stringify(data.data.path, null, 2));
-      console.log("COMMANDS:", JSON.stringify(data.data.commands, null, 2));
-      console.log("OBSTACLES:", JSON.stringify(obstacles, null, 2));
-      console.log("===========================");
     }
 
     setIsComputing(false);
@@ -336,7 +320,7 @@ const compute = () => {
     setCommands([]);
     setPage(0);
     setObstacles([]);
-    setTimeTaken(0); // newly added feature to track time taken
+    setTimeTaken(0); 
     setObstacleOrder([]);
   };
 
@@ -350,7 +334,7 @@ const compute = () => {
     setPath([]);
     setCommands([]);
     setPage(0);
-    setTimeTaken(0); // newly added feature to track time taken
+    setTimeTaken(0);
     setObstacleOrder([]);
   };
 

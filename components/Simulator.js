@@ -55,6 +55,7 @@ export default function Simulator() {
   const [page, setPage] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [timeTaken, setTimeTaken] = useState(0); // newly added feature to track time
+  const [obstacleOrder, setObstacleOrder] = useState([]);
 
   const getStepTime = (currentPage) => {
   if (currentPage >= path.length - 1) return 0;
@@ -247,24 +248,83 @@ const formatCommands = () => {
     setObstacles(newObstacles);
   };
 
-  const compute = () => {
-  // Set computing to true, act like a lock
+const calculateObstacleOrder = (pathData) => {
+  const order = [];
+  const visited = new Set();
+
+  // A = first obstacle added
+  // B = second obstacle added
+  // C = third obstacle added
+  // etc.
+  const obstacleLabels = obstacles.map((ob, index) => ({
+    ...ob,
+    label: String.fromCharCode(65 + index),
+  }));
+
+  // Go through the robot path in the exact order the robot moves
+  for (const state of pathData) {
+    for (const ob of obstacleLabels) {
+      // Do not visit the same obstacle twice
+      if (visited.has(ob.label)) {
+        continue;
+      }
+
+      let snapX = ob.x;
+      let snapY = ob.y;
+
+      /*
+       * SNAP happens 2 grids in front of the obstacle's
+       * image/red-line side.
+       */
+
+      if (ob.d === Direction.NORTH) {
+        // Red side is on top
+        snapY = ob.y - 2;
+      } 
+      else if (ob.d === Direction.SOUTH) {
+        // Red side is on bottom
+        snapY = ob.y + 2;
+      } 
+      else if (ob.d === Direction.EAST) {
+        // Red side is on right
+        snapX = ob.x + 2;
+      } 
+      else if (ob.d === Direction.WEST) {
+        // Red side is on left
+        snapX = ob.x - 2;
+      }
+
+      // Has the robot reached the SNAP position?
+      if (state.x === snapX && state.y === snapY) {
+        order.push(ob.label);
+        visited.add(ob.label);
+      }
+    }
+  }
+
+  return order;
+};
+
+const compute = () => {
   setIsRunning(false);
   setPage(0);
   setTimeTaken(0);
+  setObstacleOrder([]);
   setIsComputing(true);
 
-  // Call the query function from the API
   QueryAPI.query(obstacles, robotX, robotY, robotDir, (data, err) => {
     if (data) {
-      // If the data is valid, set the path
       setPath(data.data.path);
-
-      // Keep all commands, including SNAP commands
       setCommands(data.data.commands);
+
+      const order = calculateObstacleOrder(data.data.path);
+
+      setObstacleOrder(order);
+      console.log("PATH:", data.data.path);
+      console.log("COMMANDS:", data.data.commands);
+      console.log("OBSTACLES:", obstacles);
     }
 
-    // Set computing to false, release the lock
     setIsComputing(false);
   });
 };
@@ -281,6 +341,7 @@ const formatCommands = () => {
     setPage(0);
     setObstacles([]);
     setTimeTaken(0); // newly added feature to track time taken
+    setObstacleOrder([]);
   };
 
   const onReset = () => {
@@ -294,6 +355,7 @@ const formatCommands = () => {
     setCommands([]);
     setPage(0);
     setTimeTaken(0); // newly added feature to track time taken
+    setObstacleOrder([]);
   };
 
   const renderGrid = () => {
@@ -605,6 +667,9 @@ const formatCommands = () => {
           </span>
           <span className="mx-5 text-black">
           Time Taken: {timeTaken}s
+          </span>
+          <span className="mx-5 text-black">
+          {obstacleOrder.length > 0? `Obstacle Visit Order: ${obstacleOrder.join(" → ")}`: ""}
           </span>
           <span className="mx-5 text-black">
           {formatCommands()}

@@ -31,10 +31,6 @@ const transformCoord = (x, y) => {
   return { x: 19 - y, y: x };
 };
 
-function classNames(...classes) {
-  return classes.filter(Boolean).join(" ");
-}
-
 export default function Simulator() {
   const [robotState, setRobotState] = useState({
     x: 1,
@@ -55,7 +51,7 @@ export default function Simulator() {
   const [page, setPage] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [timeTaken, setTimeTaken] = useState(0); // newly added feature to track time
-  const [obstacleOrder, setObstacleOrder] = useState([]);
+  const [obstacleOrder, setObstacleOrder] = useState([]); // track obstacle order to calculate shortest time
 
   const getStepTime = (currentPage) => {
   if (currentPage >= path.length - 1) return 0;
@@ -358,6 +354,48 @@ const compute = () => {
     setObstacleOrder([]);
   };
 
+  const renderPlannedRoute = () => {
+  if (path.length < 2) return null;
+
+  const gridSize = 25;
+
+  const routePoints = path.map((point) => {
+    const transformed = transformCoord(point.x, point.y);
+
+    return {
+      x: transformed.y * gridSize + gridSize / 2,
+      y: transformed.x * gridSize + gridSize / 2,
+    };
+  });
+
+  const points = routePoints
+    .map((point) => `${point.x},${point.y}`)
+    .join(" ");
+
+  return (
+    <svg
+      style={{
+        position: "absolute",
+        top: 25,
+        left: 25,
+        width: gridSize * 20,
+        height: gridSize * 20,
+        pointerEvents: "none",
+        zIndex: 10,
+      }}
+    >
+      <polyline
+        points={points}
+        fill="none"
+        stroke="red"
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+};
+
   const renderGrid = () => {
     // Initialize the empty rows array
     const rows = [];
@@ -380,7 +418,7 @@ const compute = () => {
     for (let i = 0; i < 20; i++) {
       const cells = [
         // Header cells
-        <td key={i} className="w-5 h-5 md:w-8 md:h-8">
+        <td key={i} style={baseStyle}>
           <span className="text-sky-900 font-bold text-[0.6rem] md:text-base ">
             {19 - i}
           </span>
@@ -409,44 +447,60 @@ const compute = () => {
         }
 
         if (foundOb) {
-          if (foundOb.d === Direction.WEST) {
-            cells.push(
-              <td className="border border-l-4 border-l-red-500 w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
-            );
-          } else if (foundOb.d === Direction.EAST) {
-            cells.push(
-              <td className="border border-r-4 border-r-red-500 w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
-            );
-          } else if (foundOb.d === Direction.NORTH) {
-            cells.push(
-              <td className="border border-t-4 border-t-red-500 w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
-            );
-          } else if (foundOb.d === Direction.SOUTH) {
-            cells.push(
-              <td className="border border-b-4 border-b-red-500 w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
-            );
-          } else if (foundOb.d === Direction.SKIP) {
-            cells.push(
-              <td className="border w-5 h-5 md:w-8 md:h-8 bg-blue-700" />
-            );
-          }
-        } else if (foundRobotCell) {
+  if (foundOb.d === Direction.WEST) {
+    cells.push(
+      <td
+        style={baseStyle}
+        className="border border-l-4 border-l-red-500 bg-blue-700"
+      />
+    );
+  } else if (foundOb.d === Direction.EAST) {
+    cells.push(
+      <td
+        style={baseStyle}
+        className="border border-r-4 border-r-red-500 bg-blue-700"
+      />
+    );
+  } else if (foundOb.d === Direction.NORTH) {
+    cells.push(
+      <td
+        style={baseStyle}
+        className="border border-t-4 border-t-red-500 bg-blue-700"
+      />
+    );
+  } else if (foundOb.d === Direction.SOUTH) {
+    cells.push(
+      <td
+        style={baseStyle}
+        className="border border-b-4 border-b-red-500 bg-blue-700"
+      />
+    );
+  } else if (foundOb.d === Direction.SKIP) {
+    cells.push(
+      <td
+        style={baseStyle}
+        className="border bg-blue-700"
+      />
+    );
+  }
+} else if (foundRobotCell) {
           if (foundRobotCell.d !== null) {
             cells.push(
               <td
-                className={`border w-5 h-5 md:w-8 md:h-8 ${
-                  foundRobotCell.s != -1 ? "bg-red-500" : "bg-yellow-300"
-                }`}
+              style={baseStyle}
+              className={`border ${
+                foundRobotCell.s != -1 ? "bg-red-500" : "bg-yellow-300"
+              }`}
               />
             );
           } else {
             cells.push(
-              <td className="bg-green-600 border-white border w-5 h-5 md:w-8 md:h-8" />
+              <td style={baseStyle} className="bg-green-600 border-white border" />
             );
           }
         } else {
           cells.push(
-            <td className="border-black border w-5 h-5 md:w-8 md:h-8" />
+            <td style={baseStyle} className="border-black border" />
           );
         }
       }
@@ -457,7 +511,7 @@ const compute = () => {
     const yAxis = [<td key={0} />];
     for (let i = 0; i < 20; i++) {
       yAxis.push(
-        <td className="w-5 h-5 md:w-8 md:h-8">
+        <td style={baseStyle}>
           <span className="text-sky-900 font-bold text-[0.6rem] md:text-base ">
             {i}
           </span>
@@ -699,9 +753,18 @@ const compute = () => {
           </button>
         </div>
       )}
-      <table className="border-collapse border-none border-black ">
-        <tbody>{renderGrid()}</tbody>
-      </table>
+      <div
+  style={{
+    position: "relative",
+    display: "inline-block",
+  }}
+>
+  <table className="border-collapse border-none border-black">
+    <tbody>{renderGrid()}</tbody>
+  </table>
+
+  {renderPlannedRoute()}
+</div>
     </div>
   );
 }

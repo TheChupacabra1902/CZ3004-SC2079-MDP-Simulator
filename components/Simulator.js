@@ -53,6 +53,7 @@ export default function Simulator() {
   const [path, setPath] = useState([]);
   const [commands, setCommands] = useState([]);
   const [page, setPage] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
   const [timeTaken, setTimeTaken] = useState(0); // newly added feature to track time
 
   const getStepTime = (currentPage) => {
@@ -248,6 +249,9 @@ const formatCommands = () => {
 
   const compute = () => {
   // Set computing to true, act like a lock
+  setIsRunning(false);
+  setPage(0);
+  setTimeTaken(0);
   setIsComputing(true);
 
   // Call the query function from the API
@@ -267,6 +271,7 @@ const formatCommands = () => {
 
   const onResetAll = () => {
     // Reset all the states
+    setIsRunning(false);
     setRobotX(1);
     setRobotDir(0);
     setRobotY(1);
@@ -280,6 +285,7 @@ const formatCommands = () => {
 
   const onReset = () => {
     // Reset all the states
+    setIsRunning(false);
     setRobotX(1);
     setRobotDir(0);
     setRobotY(1);
@@ -405,6 +411,24 @@ const formatCommands = () => {
     setRobotState(path[page]);
   }, [page, path]);
 
+  useEffect(() => {
+  if (!isRunning || page >= path.length - 1) {
+    if (page >= path.length - 1) {
+      setIsRunning(false);
+    }
+    return;
+  }
+
+  const stepTime = getStepTime(page);
+
+  const timer = setTimeout(() => {
+    setPage((prevPage) => prevPage + 1);
+    setTimeTaken((prevTime) => prevTime + stepTime);
+  }, stepTime * 1000);
+
+  return () => clearTimeout(timer);
+}, [isRunning, page, path]);
+
   return (
     <div className="flex flex-col items-center justify-center">
       <div className="flex flex-col items-center text-center bg-sky-200 rounded-xl shadow-xl mb-8">
@@ -527,16 +551,28 @@ const formatCommands = () => {
         })}
       </div>
       <div className="btn-group btn-group-horizontal py-4">
-        <button className="btn btn-error" onClick={onResetAll}>
-          Reset All
-        </button>
-        <button className="btn btn-warning" onClick={onReset}>
-          Reset Robot
-        </button>
-        <button className="btn btn-success" onClick={compute}>
-          Submit
-        </button>
-      </div>
+  <button className="btn btn-error" onClick={onResetAll}>
+    Reset All
+  </button>
+
+  <button className="btn btn-warning" onClick={onReset}>
+    Reset Robot
+  </button>
+
+  <button className="btn btn-success" onClick={compute}>
+    Submit
+  </button>
+
+  {path.length > 0 && (
+    <button
+      className="btn btn-primary"
+      onClick={() => setIsRunning(true)}
+      disabled={isRunning || page === path.length - 1}
+    >
+      Start
+    </button>
+  )}
+</div>
 
       {path.length > 0 && (
         <div className="flex flex-row items-center text-center bg-sky-200 p-4 rounded-xl shadow-xl my-8">
